@@ -30,6 +30,7 @@ RenderFlow.FLAG_WORLD_TRANSFORM_CHANGED = 1 << 30;
 RenderFlow.FLAG_OPACITY_CHANGED = 1 << 31;
 
 let _dirtyTargets = [];
+let _dirtyWaiting = [];
 let _rendering = false;
 
 var director = cc.director;
@@ -48,14 +49,17 @@ RenderFlow.render = function (scene) {
         let flag = node._dirtyPtr[0];
 
         if (flag & RenderFlow.FLAG_UPDATE_RENDER_DATA) {
-            assembler._updateRenderData && assembler._updateRenderData();
             node._dirtyPtr[0] &= ~RenderFlow.FLAG_UPDATE_RENDER_DATA;
+            assembler._updateRenderData && assembler._updateRenderData();
         }
     }
 
     _dirtyTargets.length = 0;
 
     this._nativeFlow.render(scene._proxy, director._deltaTime);
+
+    _dirtyTargets = _dirtyWaiting.slice(0);
+    _dirtyWaiting.length = 0;
 
     _rendering = false;
 };
@@ -66,9 +70,13 @@ RenderFlow.init = function (nativeFlow) {
 };
 
 RenderFlow.register = function (target) {
-    if (_rendering) return;
     if (target._inRenderList) return;
+
+    if (_rendering) {
+        _dirtyWaiting.push(target);
+    } else {
+        _dirtyTargets.push(target);
+    }
     
-    _dirtyTargets.push(target);
     target._inRenderList = true;
 }

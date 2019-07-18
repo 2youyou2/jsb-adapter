@@ -44,14 +44,19 @@ cc.js.mixin(renderer.NodeProxy.prototype, {
         this._is3DPtr = spaceInfo.is3D;
 
         owner._proxy = this;
+        this.updateOpacity();
+        this.updateCullingMask();
+        owner.on(cc.Node.EventType.SIBLING_ORDER_CHANGED, this.updateZOrder, this);
+        owner.on(cc.Node.EventType.GROUP_CHANGED, this.updateCullingMask, this);
+    },
+
+    initNative () {
+        this.setName(this._owner._name);
+        this.updateParent();
+        this.updateOpacity();
         this.update3DNode();
         this.updateZOrder();
         this.updateCullingMask();
-        this.updateOpacity();
-        this.updateParent();
-
-        owner.on(cc.Node.EventType.SIBLING_ORDER_CHANGED, this.updateZOrder, this);
-        owner.on(cc.Node.EventType.GROUP_CHANGED, this.updateCullingMask, this);
     },
 
     destroy () {
@@ -69,6 +74,10 @@ cc.js.mixin(renderer.NodeProxy.prototype, {
             let parentSpaceInfo = parent._spaceInfo;
             this._parentPtr[0] = parentSpaceInfo.unitID;
             this._parentPtr[1] = parentSpaceInfo.index;
+
+            let parentDirtyPtr = parentSpaceInfo.dirty;
+            parentDirtyPtr[0] |= RenderFlow.FLAG_REORDER_CHILDREN;
+            this._dirtyPtr[0] |= RenderFlow.FLAG_OPACITY;
         } else {
             this._parentPtr[0] = 0xffffffff;
             this._parentPtr[1] = 0xffffffff;
