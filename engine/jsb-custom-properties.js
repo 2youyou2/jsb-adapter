@@ -2,22 +2,29 @@
 (function(){
     if (!cc.CustomProperties) return;
 
+    const enums = cc.CustomProperties.enums;
+
     class NativeCustomProperties {
         constructor() {
             this._nativeObj = new renderer.CustomProperties();
         }
 
         setProperty (name, value, type, directly) {
-            let prop
-            if (value.constructor === cc.Texture2D){
-                prop = value.getImpl(); 
-            } else if (Array.isArray(value)){
-                prop = new Float32Array(value);
-            } else {
-                prop = value;
+            if (directly || ArrayBuffer.isView(value)) {
+                value = value;
+            }
+            else if (type === enums.PARAM_TEXTURE_2D) {
+                value = new Uint32Array([value.getImpl().getHandle()]);
+            }
+            else {
+                if (!Array.isArray(value)) {
+                    value = [value];
+                }
+                
+                value = new Float32Array(value);
             }
             
-            this._nativeObj.setProperty(name, type, prop);
+            this._nativeObj.setProperty(name, type, value);
         }
 
         define (name, value) {
